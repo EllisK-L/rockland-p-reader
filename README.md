@@ -9,9 +9,9 @@ This is a first draft, it's not very fast or efficient, mainly a proof of concep
 
 ### Current Features:
 
-* Reads config to determin matrix and channel layout
-* Decodes P file into raw matrix of numeric values
-* Inserts raw values into a Dataframe
+* Reads config to determine matrix and channel layout
+* Decodes .p files into their raw matrix of numeric values
+* Inserts raw values into a Dataframe as a timeseries
 
 
 ### Planned Features:
