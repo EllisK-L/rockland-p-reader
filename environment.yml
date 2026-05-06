@@ -1,0 +1,8 @@
+name: rockland-p-reader
+channels:
+  - defaults
+dependencies:
+  - python=3.13
+  - pandas
+  - pyarrow
+prefix: /home/ellis/miniconda3/envs/rockland-p-reader
