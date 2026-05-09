@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 from PReader.pconfig_parser import PConfigParser
 from datetime import datetime, timezone, timedelta
+from PReader.physical_units import UEMPhysical
 
 class PDecoder:
     def __init__(self):
@@ -15,7 +16,8 @@ class PDecoder:
         self.all_records: list[list] = []
         self.config_parser = PConfigParser()
         self.debug_level = 0
-        self.df: pd.DataFrame = None
+        self.l0_df: pd.DataFrame = None
+        self.l1_df: pd.DataFrame = None
 
     def _get_channel_names(self):
         used_channel_names = []
@@ -27,16 +29,20 @@ class PDecoder:
         used_channel_names.remove("Gnd")
         return used_channel_names
 
-    def raw_to_pandas(self, filename):
+    def get_level_1(self) -> pd.DataFrame:
+        if self.l0_df is None:
+            raise ValueError("Need to first have level 0 data.")
+        self.l1_df = self.l0_df.copy()
+        em = UEMPhysical(self.config_parser.channels[144])
+        self.l1_df[em.get_channel_name()] = self.l0_df[em.get_channel_name()].apply(em.convert)
+        return self.l1_df
+
+
+
+    def get_level_0(self, filename) -> pd.DataFrame:
         self._decode(filename)
-        self.df = pd.DataFrame(data=self.records_dict).set_index("timestamp")
-        print(self.df)
-        # for key, item in self.records_dict.items():
-        #     print(len(item))
-        # self.display_matrix(9)
-        self.df.to_parquet("./output.parquet")
-
-
+        self.l0_df = pd.DataFrame(data=self.records_dict).set_index("timestamp")
+        return self.l0_df
 
     def decode_header(self):
         header = []
@@ -122,7 +128,6 @@ class PDecoder:
             for row in matrix:
                 row_print = ""
                 for col in row:
-                    # col_calc = f"{(-27.12496 + (0.01148876 * col)):.2f}"
                     col_calc = str(col)
                     row_print += col_calc
                     for space in range(space_between - len(str(col_calc))):
@@ -130,15 +135,6 @@ class PDecoder:
                 print(row_print)
 
             print("\n")
-
-
-
-        # data_record_byte_size = self.get_header_val(19)
-        # for i in range(data_record_byte_size-self.get_header_val(18)):
-        #     chunk = self.f_pointer.read(2)
-        #     word = struct.unpack(">H", chunk)[0]
-        #     print(f"{i+1}: {word}")
-            
 
 
     def _decode(self, filename: str):
@@ -151,16 +147,9 @@ class PDecoder:
         self.decode_header()
         print("Reading config")
         self.read_config()
-        self.df = pd.DataFrame(columns=self._get_channel_names())
+        self.l0_df = pd.DataFrame(columns=self._get_channel_names())
         self.records_dict = {channel_name: [] for  channel_name in self._get_channel_names()}
         self.records_dict["timestamp"] = []
         while self.decode_header():
             self.decode_record()
         self.f_pointer.close()
-        # print(len(self.all_records))
-        # with open("all_records.json", "w") as f:
-        #     json.dump(self.all_records, f)
-
-
-
-
